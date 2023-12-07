@@ -14,9 +14,10 @@ module project.planarity where
   open Eq using (_≡_; refl; sym; trans; cong; _≢_)
   open import Relation.Binary.Definitions using (DecidableEquality)
   
-  open import Data.Nat using (ℕ; _≟_)
+  open import Data.Nat using (ℕ; _≟_; _≥_)
   
   open import Data.List using (List; _∷_; []; _++_)
+  open import Data.List.Base using (length)
   open import Data.List.Relation.Unary.Any using (Any; here; there)
   open import Data.List.Membership.Propositional using (_∈_)
   open import Data.String using (String)
@@ -159,6 +160,11 @@ Now we can define the functions that will be building blocks for our inductive d
       ... | no  _ = findElem xs x
 ```
 
+```agda
+  extractEdgeSet : Cycle → List (ℕ × ℕ)
+  extractEdgeSet (makeCycle c cIsCycle) = c
+```
+
 We now consider two examples to ensure we correctly specified the definitions.
 
 ```agda
@@ -186,24 +192,40 @@ We now consider two examples to ensure we correctly specified the definitions.
   _ = refl
 ```
 
+We define two cycles to be equal if they have the same set of vertices and the same edges.
+
 ## Inductive definition
   Our goal is to define a predicate `isPlanar` that holds exactly for planar graphs. As we saw in the introduction, a planar graph need not have only plane drawings (more precisely, a planar graph can always be drawn in a non-planar way) - but it is enough to find a plane drawing for the graph to be planar.
 
 Thus, it is useful to define a plane drawing instead of a graph - that is, in addition to the set set of edges and set of vertices, we will also specify the set of regions (or faces) and the designated outer region.
 
 ```agda
-  record Graph : Set where
+  record GraphDrawing : Set where
     constructor graph
     field
       vertices : List ℕ
       edges : List (ℕ × ℕ)
       regions : List Cycle
       outerRegion : Cycle
+      
+
+  -- need to update the ind-step
+  data isPlanar : GraphDrawing → Set where
+    base-case : ∀ (c : Cycle) → isPlanar (graph (cycleElem c) (extractEdgeSet c) [ c ] c)
+    ind-step  : ∀ (g : GraphDrawing) (c : Cycle)
+      → isPlanar g
+      → length (cycleElem c) ≥ 2
+      → isPlanar (graph (cycleElem c) (extractEdgeSet c) [ c ] c)
 ```
+
+Let's unpack the definition:
 
 ## Euler's formula
 
 ## Other approaches
+
+[2] presents a very different approach: using homotopy type theory, it is possible to define
+an embedding of graphs into surfaces.
 
 ### UniMath library
 
@@ -214,6 +236,8 @@ The most recent version of this is can be found [here](https://github.com/ruxicl
 To do:
 - vertices have type `ℕ`, but might want to change to `String` (or a more generic type `A`)
 - it might be better to use Setoids instead of Lists for edges and vertices
+- finish ind-step
+- prove Euler's formula
 
 
 ## References
