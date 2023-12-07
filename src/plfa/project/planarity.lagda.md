@@ -1,44 +1,28 @@
 ---
-title : "Planarity: Formalising planar graphs"
+title     : "Planarity: Formalising planar graphs"
+permalink : courses/TSPL/2023/Essay/planarity.lagda.md
 ---
 
--- Ruxandra Icleanu, s2011447@.ed.ac.uk
+## Ruxandra Icleanu, s2011447@.ed.ac.uk
 
 
-
-To do:
-- do a readme of how to make this work
-- see this https://unimath.github.io/agda-unimath/graph-theory.polygons.html - seems easy to contribute to this
-
-
-```agda
+```
 module project.planarity where
   import Relation.Binary.PropositionalEquality as Eq
   open Eq using (_≡_; refl; sym; trans; cong; _≢_)
-
+  open import Relation.Binary.Definitions using (DecidableEquality)
+  
   open import Data.Nat using (ℕ; _≟_)
+  
   open import Data.List using (List; _∷_; []; _++_)
-  -- open import plfa.part1.Lists using (List; _∷_; []; _++_; _∈_; _∉_)
   open import Data.List.Relation.Unary.Any using (Any; here; there)
-  
   open import Data.List.Membership.Propositional using (_∈_)
-  
   open import Data.String using (String)
   open import Relation.Nullary using (¬_; Dec; yes; no)
   open import Data.Product
     using (_×_; proj₁; proj₂; ∃; ∃-syntax)
     renaming (_,_ to ⟨_,_⟩)
-
-  open import Data.Fin.Base using (Fin)
-
-  open import Relation.Binary.Definitions using (DecidableEquality)
   
-  -- open import foundation-core.identity-types using (Id)
-  -- open import graph-theory.directed-graphs using (Directed-Graph)
-  -- open import graph-theory.polygons using (Polygon)
-  -- open import foundation.dependent-pair-types using (Σ)
-
-  -- {-# BUILTIN LIST List #-}
 ```
 
 ## Introduction
@@ -47,69 +31,42 @@ A planar graph is a graph that can be drawn in the plane without any
 crossings, that is no two edges intersect except at a vertex they are
 incident with. We call such a drawing a plane drawing.
 
-For example, the complete graph with 4 vertices (known as K₄) can be
-drawn in the plane in multiple ways:
+For example, the complete graph (i.e. the graph in which any two vertices
+are connected) with 4 vertices (known as K₄) can be drawn in the plane in
+multiple ways:
 
 ![K4-1](graph1.png)
+![K4-2](graph2.png)
 
-The second drawing is a plane drawing, and so K₄ is a planar graph.
+We note that only the second drawing is a plane drawing, and so K₄
+is a planar graph.
 
-We consider two approaches of formalising planarity. The first approach
-is based on the idea that planar graphs can be constructed in an
-inductive fashion starting from a cycle (which is clearly planar) and
-carefully adding sequences of edges. The second approach is to use
-homotopy type theory to define an embedding of graph into surfaces.
+In what follows, we want to develop a definition of planar graphs based on
+"Formalization of Planar graphs" by H. Yamamoto et. al (with substantial changes -
+the paper uses HOL, a higher-order logic theorem proving system). The approach
+we will consider is based on the key observation that (as it will be explained later,
+a very wide class of) planar graphs can be constructed in an inductive fashion starting
+from a cycle which is clearly planar, and carefully adding sequences of edges.
 
-To show the validity of our definition, we prove Euler's formula and
-derive a simple lemma.
+We also briefly discuss other approaches. 
 
-
-Notes:
-- we make use of the library unimath but
-- contribution to the library?
--
+To show the validity of our definition, we want to prove Euler's formula.
 
 
-## Libraries
+## Preliminaries
 
-unimath
+We will restrict our attention to a specific (but common) type of graphs, namely
+2-connected graphs, i.e. graphs that remain connected after the removal of any one vertex.
 
-[description]
-- was used in both approaches
-- contribution to the library
+The following theorem from [4] proves that esthablishing a criterion for this type of graph will immediately lead to a criterion for a general graph.
 
+Theorem: A graph is planar if and only if its 2-connected (or biconnected) components are planar.
 
-
-## Inductive definition
-
-This section is based on "Formalization of Planar graphs" by H. Yamamoto
-et. al [2], with substantial changes (the original paper uses HOL to
-formalise).
-
-[you need to state some definitions here]
-
-Theorem: A graph is planar if and only if its 2-connected components
-are planar.
-
-So we can restrict our attention only to 2-connected graphs.
+We will assume that any graph mentioned from now on is 2-connected, unless otherwise specified.
 
 
-
-### Circular lists
-We first develop a theory of circular lists.
-
-In a circular list, the k-th element comes prior to the (k+1)-th
-element, and the last element comes before the first one.
-
-We define a circular list as a special case of a directed graph,
-as follows:
-  the set of elements of the list is equal to the set of vertices
-  of the graph
-  element x comes prior to element y in the list if and only if
-  there is a directed edge from the vertex x to the vertex y in
-  the graph
-
-In Agda:
+## Circular lists
+We first develop a theory of cycles.
 
 ```agda
   pattern [_] z = z ∷ []
@@ -120,8 +77,6 @@ In Agda:
 -- goal: define a circular list
 
   ```agda
-
-  -- right now type Vertex = ℕ, but might want to change to string or something even more generic
 
   deleteEdge : List (ℕ × ℕ) → (ℕ × ℕ) → List (ℕ × ℕ)
   deleteEdge [] _ = []
@@ -145,15 +100,77 @@ In Agda:
   isVertexNotInCycle : ℕ → List ℕ → Set
   isVertexNotInCycle v elemOfCycle = ¬ (v ∈ elemOfCycle)
 
+
+  -- but you should use these just for cycles?
+  -- cycDom
+  cycleElem : List (ℕ × ℕ) → List ℕ
+  cycleElem [] = []
+  cycleElem (⟨ a , b ⟩ ∷ xs) = a ∷ cycleElem xs
+  
+  
+
+  _ : cycleElem [ ⟨ 1 , 2 ⟩ , ⟨ 2 , 1 ⟩ ] ≡ [ 1 , 2 ]
+  _ = refl
+
+  -- CYC_DOM from the paper
+  
+
   -- a cycle is a list of pairs representing edges
+  
+  -- predicate that checks if something is a cycle
 
   data isCycle : List (ℕ × ℕ)  → Set where
     self-loop : ∀ (x : ℕ) → isCycle [ ⟨ x , x ⟩ ]
-    add-vertex : ∀ (x y z : ℕ) (s : List (ℕ × ℕ))
+    insert-vertex : ∀ (x y z : ℕ) (s : List (ℕ × ℕ))
       → isCycle s
       → ⟨ x , z ⟩ ∈ s
-      → isVertexNotInCycle y [ 1 ]
+      → isVertexNotInCycle y (cycleElem s) -- need to change cycleElem
+      -- final version is cycleElem' which needs to have datatype Cycle defined
       → isCycle (deleteEdge s ⟨ x , z ⟩ ++ [ ⟨ x , y ⟩ , ⟨ y , z ⟩ ])
+
+
+  data Cycle : Set where
+    makeCycle : (c : List (ℕ × ℕ)) → isCycle c → Cycle
+
+  cycle1 : Cycle
+  cycle1 = makeCycle [ ⟨ 2 , 2 ⟩ ] (self-loop 2)
+
+  cycleElem' : Cycle → List ℕ
+  cycleElem' (makeCycle c cIsCycle) = getElem c
+    where
+      getElem : List (ℕ × ℕ) → List ℕ
+      getElem [] = []
+      getElem (⟨ a , b ⟩ ∷ xs) = a ∷ getElem xs
+  
+
+  -- FORW
+  -- vertex of a cycle
+  
+  -- add an extra argument to check x is one of the elem of c
+
+  isElemInCycle : Cycle → ℕ → Set
+  isElemInCycle cycle x = x ∈ (cycleElem' cycle) 
+
+  nextElem : (cycle : Cycle) → (x : ℕ) → ℕ
+  nextElem (makeCycle c cIsCycle) x  = findElem c x
+    where
+      findElem : List (ℕ × ℕ) → ℕ → ℕ
+      findElem [] x = 0
+      findElem (⟨ a , b ⟩ ∷ xs) x with a ≟ x
+      ... | yes _ = b
+      ... | no  _ = findElem xs x
+
+  _ : nextElem cycle1 2 ≡ 2
+  _ = refl
+
+
+  -- CYC-CONTRACT
+  -- contractCycle 
+
+  -- CYC_BASE = self-loop
+  -- CYC-INSERT = add-vertex
+  
+   
 
 -- we represent them as lists but the order should not matter? or it matters but they should be circular
 -- alternatives: finite sets, partial maps (see sltc chapter from Software Foundations)
@@ -214,9 +231,17 @@ We need to equality in a smart way so [⟨ 1 , 2 ⟩ , ⟨ 2 , 3 ⟩ , ⟨ 3 , 1
   not-in (here ())
   not-in (there ())
   
-  
-  _ : isCycle [ ⟨ 1 , 2 ⟩ , ⟨ 2 , 1 ⟩ ]
-  _ = add-vertex 1 2 1 [ ⟨ 1 , 1 ⟩ ] (self-loop 1) ( here (refl { A = ℕ × ℕ }) ) (not-in)
+
+  cycle2IsCycle : isCycle [ ⟨ 1 , 2 ⟩ , ⟨ 2 , 1 ⟩ ]
+  cycle2IsCycle = insert-vertex 1 2 1 [ ⟨ 1 , 1 ⟩ ] (self-loop 1)
+                                  ( here (refl { A = ℕ × ℕ }) ) (not-in)
+
+  cycle2 : Cycle
+  cycle2 = makeCycle [ ⟨ 1 , 2 ⟩ , ⟨ 2 , 1 ⟩ ] cycle2IsCycle
+
+  _ : cycleElem' cycle2 ≡ [ 1 , 2 ]
+  _ = refl
+
 ```
 
 
@@ -228,6 +253,34 @@ We need to equality in a smart way so [⟨ 1 , 2 ⟩ , ⟨ 2 , 3 ⟩ , ⟨ 3 , 1
 We define a plane drawing of a graph to be a quadruple: the set of vertices, the set of edges, the set of faces, and the infinite face
 
 We f
+
+-- define cycle equality
+
+
+```agda
+  areEdgesEq : (c c′ : Cycle) → Set
+  areEdgesEq c c′ = (x : ℕ) → (x ∈ cycleElem' c → nextElem c x ≡ nextElem c′ x)
+  
+  -- _≡C_ (c c′ : Cycle) : Set where
+  --  refl-C : cycleElem' c ≡ cycleElem' c′ → areEdgesEq c c′ → c ≡C c′
+```
+  
+
+## Inductive definition
+
+```agda
+  record Graph : Set where
+    constructor graph
+    field
+      vertices : List ℕ
+      edges : List (ℕ × ℕ)
+      regions : List Cycle
+      outerRegion : Cycle
+```
+
+  data isPlanar : Graph → Cycle → Set
+    base-case : ∀ (g : Graph) (c : Cycle) → vertices ≡ cycleElem' c → isPlanar g c
+
  
 
 ```agda
@@ -299,7 +352,7 @@ We define two predicates.
 ```
 
 ```agda
-  data ClassicSet : List (ℕ × ℕ)
+  -- data ClassicSet : List (ℕ × ℕ)
     
 
   {--
@@ -314,9 +367,20 @@ We define two predicates.
 
 ```
 
+## Future work
+
+The most recent version of this is can be found [here](https://github.com/ruxicl/plfa.github.io/tree/tspl-project/courses/TSPL/2023/Essay).
+
+To do:
+- vertices have type ℕ, but might want to change to String
+
 
 ## References
-[1] On Planarity of Graphs in Homotopy Type Theory - JONATHAN PRIETO-CUBIDES, HÅKON ROBBESTAD GYLTERUD
+
+[1] On Planarity of Graphs in Homotopy Type Theory - Jonathan Prieto-Cubides, Hakon Robbestad Gylterud
+
 [2] Formalization of Planar Graphs - Mitsuharu Yamamoto, Shin-ya Nishizaki, Masami Hagiya, and Yozo Toda
+
 [3] Introduction to graph theory (5th edition) - Robin J. Wilson
-[4] 
+
+[4] J. E. Hopcroft and R. E. Tarjan. Efficient planarity testing. J. ACM, 21(4):549–568, 1974.
